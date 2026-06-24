@@ -1,0 +1,11 @@
+build/
+*.obj
+*.tga
+*.exe
+*.pdb
+*.ilk
+*.lib
+*.exp
+.DS_Store
+Thumbs.db
+obj/
