@@ -182,12 +182,21 @@ struct FlatShader : IShader {
 
 struct NormalVisShader : IShader {
     const Model &model;
+    vec4 varying_nrm[3];
+
     NormalVisShader(const Model &m) : model(m) {}
+
     vec4 vertex(int face, int vert) override {
+        varying_nrm[vert] = ModelView.invert_transpose() * model.normal(face, vert);
         return Perspective * ModelView * model.vert(face, vert);
     }
-    std::pair<bool,TGAColor> fragment(const vec3) const override {
-        return {false, TGAColor{128, 128, 255, 255}};
+
+    std::pair<bool,TGAColor> fragment(const vec3 bar) const override {
+        vec4 n = normalized(varying_nrm[0]*bar[0] + varying_nrm[1]*bar[1] + varying_nrm[2]*bar[2]);
+        uint8_t r = (uint8_t)((n.x + 1.0) * 0.5 * 255);
+        uint8_t g = (uint8_t)((n.y + 1.0) * 0.5 * 255);
+        uint8_t b = (uint8_t)((n.z + 1.0) * 0.5 * 255);
+        return {false, TGAColor{b, g, r, 255}};
     }
 };
 
@@ -213,12 +222,22 @@ struct TextureOnlyShader : IShader {
 
 struct DepthShader : IShader {
     const Model &model;
+    double clip_z[3];
+
     DepthShader(const Model &m) : model(m) {}
+
     vec4 vertex(int face, int vert) override {
-        return Perspective * ModelView * model.vert(face, vert);
+        vec4 clip = Perspective * ModelView * model.vert(face, vert);
+        clip_z[vert] = clip.z;
+        return clip;
     }
-    std::pair<bool,TGAColor> fragment(const vec3) const override {
-        return {false, TGAColor{128, 128, 128, 255}};
+
+    std::pair<bool,TGAColor> fragment(const vec3 bar) const override {
+        double z = clip_z[0]*bar[0] + clip_z[1]*bar[1] + clip_z[2]*bar[2];
+        double t = z * 0.15 + 0.5;
+        if (t < 0) t = 0; if (t > 1) t = 1;
+        uint8_t c = (uint8_t)(t * 255);
+        return {false, TGAColor{c, c, c, 255}};
     }
 };
 
